@@ -59,9 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("serve", help="web UI: upload or paste, get a plan")
     s.add_argument("--bind", default="127.0.0.1", help="address (default 127.0.0.1)")
     s.add_argument("--port", type=int, default=8766, help="port (default 8766)")
-    s.add_argument("--token", default="", help="access token (default $FIXPLAN_WEB_TOKEN)")
+    s.add_argument("--token", default="",
+                   help="access token (default $FIXPLAN_WEB_TOKEN, else a new random one per start)")
     s.add_argument("--no-token", action="store_true",
-                   help="allow a non-local bind without a token (only behind an auth proxy)")
+                   help="no access token (only on localhost or behind a proxy that authenticates)")
     s.add_argument("--data", help="where finished plans are kept (default ~/.cache/fixplan/jobs)")
     s.add_argument("--open", action="store_true", help="open the browser")
     _common(s)
@@ -119,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "serve":
         from .web import serve
         return serve(cfg, bind=args.bind, port=args.port, token=args.token, data_dir=args.data,
-                     open_browser=args.open, allow_no_token=args.no_token)
+                     open_browser=args.open, no_auth=args.no_token)
     return run_plan(args, cfg)
 
 

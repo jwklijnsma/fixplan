@@ -8,7 +8,7 @@
 #   loginctl enable-linger "$USER"                           # keep it running without a login
 #   systemctl --user enable --now podman-auto-update.timer   # daily image updates
 #
-# Open http://localhost:8766/#token=<token>; see the token again with
+# Open http://localhost:8766/?token=<token>; see the token again with
 #   podman secret inspect --showsecret --format '{{.SecretData}}' fixplan-token
 # Logs: journalctl --user -u fixplan -f
 

@@ -7,3 +7,6 @@ dist/
 .fixplan/
 /site/
 .cache/
+
+# web UI (React); the built bundle in src/fixplan/static/ IS committed
+web/node_modules/

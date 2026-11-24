@@ -127,8 +127,6 @@ jobs:
       - name: Smoke test - web UI
         run: |
           set -euo pipefail
-          # no token on 0.0.0.0 must be refused
-          if docker run --rm fixplan:test; then echo "started without a token"; exit 1; fi
           docker run -d --name fixplan -p 127.0.0.1:8766:8766 \
             --health-interval=2s --health-start-period=2s \
             -e FIXPLAN_WEB_TOKEN=ci-token fixplan:test
@@ -138,11 +136,16 @@ jobs:
           done
           test "$(docker inspect -f '{{.State.Health.Status}}' fixplan)" = healthy
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8766/api/jobs)" = 401
+          # the UI bundle is in the image and served
+          curl -fsS http://127.0.0.1:8766/ | grep -q '<div id="root">'
+          curl -fsS -o /dev/null http://127.0.0.1:8766/app.js
+          # the token link swaps the token for an HttpOnly cookie
+          curl -s -D - -o /dev/null "http://127.0.0.1:8766/?token=ci-token" | grep -qi '^set-cookie: fixplan_token=.*HttpOnly'
           body=$(python3 -c "import json,base64;print(json.dumps({'files':[{'name':'Dockerfile','data':base64.b64encode(open('examples/sample/Dockerfile','rb').read()).decode()}],'no_llm':True}))")
           id=$(curl -fsS -H "Authorization: Bearer ci-token" -H "Content-Type: application/json" \
                  -d "$body" http://127.0.0.1:8766/api/jobs | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
           for i in $(seq 30); do
-            state=$(curl -fsS -H "Authorization: Bearer ci-token" "http://127.0.0.1:8766/api/jobs/$id" | python3 -c "import json,sys;print(json.load(sys.stdin)['state'])")
+            state=$(curl -fsS -H "Authorization: Bearer ci-token" "http://127.0.0.1:8766/api/jobs/$id" | python3 -c "import json,sys;print(json.load(sys.stdin)['status'])")
             [ "$state" = done ] && break
             sleep 1
           done

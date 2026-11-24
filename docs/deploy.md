@@ -10,7 +10,7 @@ docker run -d --name fixplan -p 127.0.0.1:8766:8766 \
   ghcr.io/jwklijnsma/fixplan
 ```
 
-The image listens on `0.0.0.0:8766` and **refuses to start without a token**. It contains
+The image listens on `0.0.0.0:8766` and always needs a token: set `FIXPLAN_WEB_TOKEN`, or take the random one from `docker logs fixplan`. It contains
 shellcheck, hadolint, ruff and yamllint, runs as UID 1000 (any UID with group 0 works, so
 OpenShift's random UIDs are fine) and has a health check on `/healthz`. Ollama is not in the
 image: `OLLAMA_HOST` defaults to the Docker host.

@@ -1,26 +1,77 @@
 name: web
 
-# The web UI is one self-contained page (src/fixplan/static/index.html) with no build step,
-# so instead of building a bundle this drives it in a real browser: upload files, paste a
-# log, make a plan, browse the tabs, delete it, and fail on any JavaScript error.
-# The Ollama model is the mock from tests/, so no GPU is needed.
+# The React UI lives in web/ and is built into src/fixplan/static/, which is
+# committed so `pip install` and the Docker image need no Node. This checks the
+# committed bundle matches the source; on bot PRs (Renovate, Dependabot) that bump
+# web dependencies it rebuilds and pushes the bundle itself.
 on:
   pull_request:
-    paths: ["src/fixplan/static/**", "src/fixplan/web.py", "tests/test_ui.py", ".github/workflows/web.yml"]
+    paths: ["web/**", "src/fixplan/static/**", "src/fixplan/web.py", "tests/test_ui.py", ".github/workflows/web.yml"]
   push:
     branches: [main]
-    paths: ["src/fixplan/static/**", "src/fixplan/web.py", "tests/test_ui.py", ".github/workflows/web.yml"]
-  workflow_dispatch:
-
-concurrency:
-  group: web-${{ github.ref }}
-  cancel-in-progress: true
+    paths: ["web/**", "src/fixplan/static/**", "src/fixplan/web.py", "tests/test_ui.py", ".github/workflows/web.yml"]
 
 permissions:
   contents: read
 
 jobs:
   web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only used to push a rebuilt bundle to a bot's PR branch
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Bundle matches the source
+        id: bundle
+        working-directory: .
+        run: |
+          if git diff --quiet -- src/fixplan/static && [ -z "$(git ls-files --others --exclude-standard src/fixplan/static)" ]; then
+            echo "Committed bundle is up to date."
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          else
+            git status --short -- src/fixplan/static
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Rebuild for a bot's dependency PR
+        if: >-
+          steps.bundle.outputs.stale == 'true' && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+          && (contains(fromJSON('["renovate[bot]","dependabot[bot]"]'), github.actor) || startsWith(github.head_ref, 'renovate/'))
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/fixplan/static
+          git commit -m "build(web): rebuild the UI bundle"
+          git push
+          echo "Pushed a rebuilt bundle to this PR." >> "$GITHUB_STEP_SUMMARY"
+      - name: Stale bundle
+        if: >-
+          steps.bundle.outputs.stale == 'true' && !(github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository
+          && (contains(fromJSON('["renovate[bot]","dependabot[bot]"]'), github.actor) || startsWith(github.head_ref, 'renovate/')))
+        run: |
+          echo "::error::src/fixplan/static/ is out of date with web/src. Run 'make web' and commit the result."
+          exit 1
+
+  # The built UI in a real browser against the server and the mock Ollama: log in, upload,
+  # make a plan, browse every tab, model picker, jobs panel, delete. Fails on any JS error.
+  browser:
+    needs: web
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -31,11 +82,13 @@ jobs:
       - run: pip install -e ".[dev,ui]"
       - run: python -m playwright install --with-deps chromium
       - name: Browser test of the UI
-        run: pytest -q tests/test_ui.py -p no:cacheprovider --basetemp="$RUNNER_TEMP/ui"
+        env:
+          FIXPLAN_SHOTS: ${{ runner.temp }}/shots
+        run: pytest -q tests/test_ui.py -p no:cacheprovider
       - name: Screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ui-screenshots
-          path: ${{ runner.temp }}/ui/**/*.png
+          path: ${{ runner.temp }}/shots/*.png
           if-no-files-found: ignore

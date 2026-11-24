@@ -163,27 +163,34 @@ def review_files(files: list[SourceFile], known: list[Finding], cfg: Config,
     batches = build_batches(files, cfg)
     findings: list[Finding] = []
     notes: list[str] = []
-    done = 0
 
     def one(b: Batch) -> list[Finding]:
         return _review_batch(b, known, cfg, client)
 
     with ThreadPoolExecutor(max_workers=max(1, cfg.workers)) as pool:
         futures = {pool.submit(one, b): b for b in batches}
-        for fut in as_completed(futures):
-            b = futures[fut]
-            try:
-                findings += fut.result()
-            except OllamaTimeout as exc:
-                notes.append(f"model review of {b.label} skipped: {exc}")
-            except OllamaError as exc:
-                notes.append(f"model review of {b.label} failed: {exc}")
-            except ValueError as exc:
-                notes.append(f"model answer for {b.label} was not usable: {exc}")
-            done += 1
-            if progress:
-                progress(done, len(batches), b.label)
+        try:
+            _collect(futures, findings, notes, progress, len(batches))
+        except BaseException:
+            for fut in futures:          # cancelled: drop the requests that did not start
+                fut.cancel()
+            raise
     return findings, notes
+
+
+def _collect(futures, findings, notes, progress, total) -> None:
+    for done, fut in enumerate(as_completed(futures), 1):
+        b = futures[fut]
+        try:
+            findings += fut.result()
+        except OllamaTimeout as exc:
+            notes.append(f"model review of {b.label} skipped: {exc}")
+        except OllamaError as exc:
+            notes.append(f"model review of {b.label} failed: {exc}")
+        except ValueError as exc:
+            notes.append(f"model answer for {b.label} was not usable: {exc}")
+        if progress:
+            progress(done, total, b.label)
 
 
 def _review_batch(b: Batch, known: list[Finding], cfg: Config,

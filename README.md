@@ -58,19 +58,20 @@ error, `0` otherwise — so it can gate a pipeline.
 ## Web UI
 
 ```bash
-fixplan serve                                   # localhost only, no token needed
-FIXPLAN_WEB_TOKEN=$(openssl rand -hex 24) fixplan serve --bind 0.0.0.0
+fixplan serve        # prints http://localhost:8766/?token=<token>
 ```
 
-Drop files, a whole folder or a ZIP/tar, or paste a log; add a goal; get the plan with
-copyable commands and patches, and download it as Markdown, JSON or SARIF. Jobs run one at
-a time (one GPU) and finished plans survive a restart.
+The same React UI as ansreview and helmreview: drop files, a folder or an archive anywhere
+on the page, or paste a log; add a goal; get the plan with copyable commands and patches.
+Tick steps off as you go, browse findings with the code around them, switch the model from
+the top bar, follow jobs in the jobs panel, and download Markdown, JSON or SARIF.
 
-Security: a non-local bind needs a token; without one, cross-site requests are refused.
-Archives are unpacked in memory with path-traversal, link, size and file-count checks.
-Uploaded content is never executed and is passed to the model as data, with an explicit
-instruction not to follow instructions inside it. There is no per-upload config: an upload
-can't change the model, server or rules.
+![A plan in the web UI](docs/assets/plan.png)
+
+Security as in the siblings: an access token is always required (a cookie after the first
+`/?token=` link), POSTs need a CSRF header, the page has a strict CSP. Archives are unpacked
+in memory with path-traversal, link, size and file-count checks; uploads are never executed
+and are passed to the model as data. An upload can't change any configuration.
 
 ## Container
 
@@ -97,7 +98,8 @@ ones: `model`, `ollama_host`, `language` (en/nl), `workers`, `num_ctx`, `goal`,
 ## Development
 
 ```bash
-make install && make test
+make install && make test     # Python
+make web-test && make web     # the React UI in web/, built into src/fixplan/static/
 ```
 
 Tests use a mock Ollama server (`tests/mock_ollama.py`), so they need no GPU.
@@ -107,7 +109,7 @@ Tests use a mock Ollama server (`tests/mock_ollama.py`), so they need no GPU.
 | Workflow | |
 |---|---|
 | `docker` | tests, then the image: built, smoke-tested (CLI + web UI), pushed to GHCR |
-| `web` | the web UI in a real browser |
+| `web` | UI typecheck + tests, built bundle matches the source, then the UI in a real browser |
 | `docs` | MkDocs site to GitHub Pages |
 | `release` / `auto-release` | version bump, tag, wheel, GitHub release, image; after each merged PR |
 | `renovate` / `automerge` | dependency updates, merged on their own when green (patch/minor) |

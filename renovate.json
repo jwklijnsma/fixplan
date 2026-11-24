@@ -1,19 +1,42 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":dependencyDashboard"],
-  "labels": ["dependencies"],
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+  "labels": [
+    "dependencies"
+  ],
   "prHourlyLimit": 4,
   "prConcurrentLimit": 10,
   "packageRules": [
     {
+      "description": "The web UI's npm packages: one PR for all minor and patch bumps",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "web UI dependencies"
+    },
+    {
       "description": "GitHub Actions: one PR for all minor and patch bumps",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "GitHub Actions"
     },
     {
       "description": "The docs site (requirements-docs.txt)",
-      "matchFileNames": ["requirements-docs.txt"],
+      "matchFileNames": [
+        "requirements-docs.txt"
+      ],
       "commitMessageTopic": "docs dependency {{depName}}"
     }
   ]

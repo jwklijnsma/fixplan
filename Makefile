@@ -6,7 +6,7 @@ IMAGE  ?= fixplan:dev
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install test ui-test docs serve docker version release release-patch release-minor release-major release-dry-run
+.PHONY: help install test web web-dev web-test ui-test docs serve docker version release release-patch release-minor release-major release-dry-run
 
 help: ## show this list
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -20,7 +20,16 @@ test: ## run the test suite
 	$(PYTHON) -m pytest -q
 
 serve: ## start the web UI on localhost:8766
-	$(PYTHON) -m fixplan serve --open
+	$(PYTHON) -m fixplan serve --open --no-token
+
+web: ## build the React UI into src/fixplan/static (commit the result)
+	cd web && npm ci && npm run build
+
+web-dev: ## UI dev server with hot reload; run `make serve` (port 8766) next to it
+	cd web && npm run dev
+
+web-test: ## typecheck and unit-test the UI
+	cd web && npm run typecheck && npm test
 
 ui-test: ## browser test of the web UI (needs: pip install -e ".[ui]" && playwright install chromium)
 	$(PYTHON) -m pytest -q tests/test_ui.py
