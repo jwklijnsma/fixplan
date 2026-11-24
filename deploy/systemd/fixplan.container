@@ -1,0 +1,51 @@
+# fixplan web UI as a Podman Quadlet (RHEL 9/10, Fedora, any Podman >= 4.4), rootless.
+#
+#   openssl rand -hex 24 | tr -d '\n' | podman secret create fixplan-token -
+#   mkdir -p ~/.config/containers/systemd ~/.config/fixplan
+#   cp fixplan.container ~/.config/containers/systemd/
+#   install -m 600 fixplan.env.example ~/.config/fixplan/fixplan.env   # required (may stay as is)
+#   systemctl --user daemon-reload && systemctl --user start fixplan
+#   loginctl enable-linger "$USER"                           # keep it running without a login
+#   systemctl --user enable --now podman-auto-update.timer   # daily image updates
+#
+# Open http://localhost:8766/#token=<token>; see the token again with
+#   podman secret inspect --showsecret --format '{{.SecretData}}' fixplan-token
+# Logs: journalctl --user -u fixplan -f
+
+[Unit]
+Description=fixplan: upload code, config or logs, get a fix plan from a local Ollama model
+Documentation=https://github.com/jwklijnsma/fixplan
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=fixplan
+Image=ghcr.io/jwklijnsma/fixplan:latest
+AutoUpdate=registry
+# Only on this machine. For another machine use a TLS proxy in front (or an SSH tunnel).
+PublishPort=127.0.0.1:8766:8766
+# Finished plans survive restarts and updates; :U gives the volume to the container user.
+Volume=fixplan-data:/home/fixplan/.cache/fixplan:U
+Secret=fixplan-token,type=env,target=FIXPLAN_WEB_TOKEN
+# Settings (model, language, house rules). The file must exist; the example is fine as is.
+EnvironmentFile=%h/.config/fixplan/fixplan.env
+# Ollama on this host must listen on more than 127.0.0.1 for the container to reach it:
+# `systemctl edit ollama` -> [Service] Environment=OLLAMA_HOST=0.0.0.0
+Environment=OLLAMA_HOST=http://host.containers.internal:11434
+NoNewPrivileges=true
+DropCapability=all
+ReadOnly=true
+Tmpfs=/tmp
+HealthCmd=python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8766/healthz', timeout=4)"
+HealthInterval=30s
+HealthStartPeriod=10s
+StopSignal=SIGINT
+StopTimeout=30
+
+[Service]
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=600
+
+[Install]
+WantedBy=default.target

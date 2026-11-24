@@ -1,0 +1,5 @@
+2026-11-24 10:00:01 INFO starting app
+2026-11-24 10:00:02 INFO connecting to db:5432
+2026-11-24 10:00:03 ERROR connect: connection refused
+2026-11-24 10:00:04 ERROR connect: connection refused
+2026-11-24 10:00:05 FATAL giving up
