@@ -16,6 +16,7 @@ dependencies = ["PyYAML>=6.0", "requests>=2.31"]
 [project.optional-dependencies]
 lint = ["yamllint>=1.35", "ruff>=0.6", "hadolint-py>=2.12"]
 dev = ["pytest>=8"]
+ui = ["playwright>=1.45"]
 
 [project.scripts]
 fixplan = "fixplan.cli:main"

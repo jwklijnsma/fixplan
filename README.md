@@ -101,3 +101,13 @@ make install && make test
 ```
 
 Tests use a mock Ollama server (`tests/mock_ollama.py`), so they need no GPU.
+`make ui-test` drives the web UI in Chromium (Playwright); `make docs` previews the
+[MkDocs Material](https://squidfunk.github.io/mkdocs-material/) site from `docs/`.
+
+| Workflow | |
+|---|---|
+| `docker` | tests, then the image: built, smoke-tested (CLI + web UI), pushed to GHCR |
+| `web` | the web UI in a real browser |
+| `docs` | MkDocs site to GitHub Pages |
+| `release` / `auto-release` | version bump, tag, wheel, GitHub release, image; after each merged PR |
+| `renovate` / `automerge` | dependency updates, merged on their own when green (patch/minor) |

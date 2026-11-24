@@ -1,14 +1,14 @@
 name: Docs
 
-# Builds the Zensical site on every push / PR that touches the docs, and
+# Builds the MkDocs (Material) site on every push / PR that touches the docs, and
 # publishes it to GitHub Pages from main.
 # One-time setup: repo > Settings > Pages > Source: "GitHub Actions".
 on:
   push:
     branches: [main]
-    paths: [docs/**, zensical.toml, requirements-docs.txt, .github/workflows/docs.yml]
+    paths: [docs/**, mkdocs.yml, requirements-docs.txt, .github/workflows/docs.yml]
   pull_request:
-    paths: [docs/**, zensical.toml, requirements-docs.txt, .github/workflows/docs.yml]
+    paths: [docs/**, mkdocs.yml, requirements-docs.txt, .github/workflows/docs.yml]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: requirements-docs.txt
       - run: pip install -r requirements-docs.txt
       # --strict: fail on warnings such as links to missing pages or anchors
-      - run: zensical build --clean --strict
+      - run: mkdocs build --clean --strict
       - uses: actions/upload-pages-artifact@v5
         if: github.event_name != 'pull_request'
         with:

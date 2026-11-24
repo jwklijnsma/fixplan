@@ -6,7 +6,7 @@ IMAGE  ?= fixplan:dev
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install test serve docker version release release-patch release-minor release-major release-dry-run
+.PHONY: help install test ui-test docs serve docker version release release-patch release-minor release-major release-dry-run
 
 help: ## show this list
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -21,6 +21,12 @@ test: ## run the test suite
 
 serve: ## start the web UI on localhost:8766
 	$(PYTHON) -m fixplan serve --open
+
+ui-test: ## browser test of the web UI (needs: pip install -e ".[ui]" && playwright install chromium)
+	$(PYTHON) -m pytest -q tests/test_ui.py
+
+docs: ## preview the docs site on http://localhost:8000 (MkDocs Material)
+	$(PYTHON) -m pip install -q -r requirements-docs.txt && mkdocs serve
 
 docker: ## build the Docker image locally (fixplan:dev)
 	docker build -t $(IMAGE) .

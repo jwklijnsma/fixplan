@@ -1,0 +1,41 @@
+name: web
+
+# The web UI is one self-contained page (src/fixplan/static/index.html) with no build step,
+# so instead of building a bundle this drives it in a real browser: upload files, paste a
+# log, make a plan, browse the tabs, delete it, and fail on any JavaScript error.
+# The Ollama model is the mock from tests/, so no GPU is needed.
+on:
+  pull_request:
+    paths: ["src/fixplan/static/**", "src/fixplan/web.py", "tests/test_ui.py", ".github/workflows/web.yml"]
+  push:
+    branches: [main]
+    paths: ["src/fixplan/static/**", "src/fixplan/web.py", "tests/test_ui.py", ".github/workflows/web.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+          cache: pip
+      - run: pip install -e ".[dev,ui]"
+      - run: python -m playwright install --with-deps chromium
+      - name: Browser test of the UI
+        run: pytest -q tests/test_ui.py -p no:cacheprovider --basetemp="$RUNNER_TEMP/ui"
+      - name: Screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: ${{ runner.temp }}/ui/**/*.png
+          if-no-files-found: ignore

@@ -121,7 +121,7 @@ jobs:
         run: |
           gh workflow run docker.yml --repo "$REPO" --ref main
           files=$(gh api "repos/$REPO/pulls/$PR/files?per_page=100" --jq '.[].filename')
-          if grep -qE '^(docs/|documentation/|zensical\.toml$|requirements-docs\.txt$|\.github/workflows/docs\.yml$)' <<< "$files"; then
+          if grep -qE '^(docs/|documentation/|mkdocs\.yml$|requirements-docs\.txt$|\.github/workflows/docs\.yml$)' <<< "$files"; then
             gh workflow run docs.yml --repo "$REPO" --ref main
           fi
           echo "Started docker (tests + image) on main, and docs if the PR touched the site." >> "$GITHUB_STEP_SUMMARY"
