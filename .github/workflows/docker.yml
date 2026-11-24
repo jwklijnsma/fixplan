@@ -119,7 +119,9 @@ jobs:
           sources = {f["source"] for f in p["findings"]}
           print(f"{len(p['steps'])} steps, {len(p['findings'])} findings, sources: {sorted(sources)}")
           assert p["steps"], "no plan steps"
-          assert {"static", "hadolint", "yamllint"} <= sources, f"linters missing in the image: {p['notes']}"
+          assert {"static", "hadolint"} <= sources, f"checks missing: {sorted(sources)}"
+          missing = [n for n in p["notes"] if "not installed" in n or "failed" in n]
+          assert not missing, f"linters missing or broken in the image: {missing}"
           EOF
 
       - name: Smoke test - web UI
