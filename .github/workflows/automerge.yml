@@ -9,8 +9,8 @@ name: automerge
 # Opt out for one PR: add the label "no-automerge", or mark it as a draft.
 #
 # The merge is done with GITHUB_TOKEN, and pushes made with GITHUB_TOKEN don't
-# start other workflows. So after merging, this workflow starts the workflows that
-# normally run on a push to main (docker: tests + image, docs: the site) itself.
+# start other workflows. So after merging, this workflow starts the docs site
+# deploy itself when the PR touched the site.
 
 on:
   pull_request:
@@ -38,7 +38,7 @@ jobs:
       contents: write        # merge, delete the branch
       pull-requests: write
       checks: read
-      actions: write         # start docker/docs on main after the merge
+      actions: write         # start docs on main after the merge
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
@@ -102,14 +102,14 @@ jobs:
           state=$(jq -r .state <<< "$pr"); head=$(jq -r .head.sha <<< "$pr"); ref=$(jq -r .head.ref <<< "$pr")
           [ "$state" = open ] || { echo "PR is $state; nothing to do."; exit 0; }
           if [ "$head" != "$SHA" ]; then
-            # The web workflow may have pushed a rebuilt UI bundle (as github-actions[bot],
-            # which starts no new checks). Anyone else's commit gets its own run.
+            # Only commits by github-actions[bot] (which start no new checks) are merged
+            # along; anyone else's commit gets its own run.
             others=$(gh api "repos/$REPO/compare/$SHA...$head" \
                        --jq '[.commits[] | select(.author.login != "github-actions[bot]")] | length')
             if [ "$others" != 0 ]; then
               echo "The PR changed while waiting; the run for the new commit decides."; exit 0
             fi
-            echo "Merging $head (adds the rebuilt UI bundle on top of the checked commit)."
+            echo "Merging $head (adds github-actions[bot] commits on top of the checked commit)."
           fi
           gh api -X PUT "repos/$REPO/pulls/$PR/merge" -f merge_method=squash -f sha="$head" --jq .message
           gh api -X DELETE "repos/$REPO/git/refs/heads/$ref" >/dev/null 2>&1 || true
@@ -119,9 +119,8 @@ jobs:
       - name: Run the main-branch workflows
         if: env.merged == 'true'
         run: |
-          gh workflow run docker.yml --repo "$REPO" --ref main
           files=$(gh api "repos/$REPO/pulls/$PR/files?per_page=100" --jq '.[].filename')
-          if grep -qE '^(docs/|documentation/|mkdocs\.yml$|requirements-docs\.txt$|\.github/workflows/docs\.yml$)' <<< "$files"; then
+          if grep -qE '^(docs/|zensical\.toml$|requirements-docs\.txt$|\.github/workflows/docs\.yml$)' <<< "$files"; then
             gh workflow run docs.yml --repo "$REPO" --ref main
+            echo "Started the docs deploy on main." >> "$GITHUB_STEP_SUMMARY"
           fi
-          echo "Started docker (tests + image) on main, and docs if the PR touched the site." >> "$GITHUB_STEP_SUMMARY"

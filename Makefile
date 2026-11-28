@@ -35,7 +35,7 @@ ui-test: ## browser test of the web UI (needs: pip install -e ".[ui]" && playwri
 	$(PYTHON) -m pytest -q tests/test_ui.py
 
 docs: ## preview the docs site on http://localhost:8000 (MkDocs Material)
-	$(PYTHON) -m pip install -q -r requirements-docs.txt && mkdocs serve
+	$(PYTHON) -m pip install -q -r requirements-docs.txt && zensical serve
 
 docker: ## build the Docker image locally (fixplan:dev)
 	docker build -t $(IMAGE) .

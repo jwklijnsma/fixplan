@@ -104,7 +104,7 @@ make web-test && make web     # the React UI in web/, built into src/fixplan/sta
 
 Tests use a mock Ollama server (`tests/mock_ollama.py`), so they need no GPU.
 `make ui-test` drives the web UI in Chromium (Playwright); `make docs` previews the
-[MkDocs Material](https://squidfunk.github.io/mkdocs-material/) site from `docs/`.
+[Zensical](https://zensical.org) site from `docs/`.
 
 | Workflow | |
 |---|---|
